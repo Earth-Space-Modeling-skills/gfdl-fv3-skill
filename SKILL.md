@@ -87,8 +87,8 @@ The cloned tag here is the **202411** FV3 release.
 ## Critical Rules
 
 1. **FV3 is a dycore, not a full model.** It needs a host: AM4 driver, SHiELD, UFS atmosphere, or your own coupling. See `driver/` for the host interface.
-2. **Vertical Lagrangian remapping is core.** Levels move with the flow each substep, then remap back to reference levels. Misconfigured remap intervals cause noisy fields.
-3. **Two timescales:** outer dynamics (`dt_atmos`) and inner acoustic substepping (`k_split`, `n_split`). Get these wrong and you violate CFL or burn cycles.
+2. **Vertical Lagrangian remapping is core.** Levels move with the flow during dynamics, then remap back to reference levels at the end of each `n_split` cycle (not every acoustic substep). Misconfigured remap intervals cause noisy fields.
+3. **Three nested timescales.** Physics step `dt_atmos`, then `n_split` dynamics steps per physics step, then `k_split` acoustic sub-steps per dynamics step. Total acoustic steps per physics step = `n_split * k_split`. Get these wrong and you violate CFL or burn cycles. Vertical Lagrangian remapping is performed at the end of each `n_split` cycle (not every acoustic substep).
 4. **Cubed-sphere has 6 tiles.** Halo regions across tile edges need special treatment; routines like `mpp_update_domains` handle this when called correctly.
 5. **Cite Putman & Lin (2007) and Harris & Lin (2013)** when describing the FV3 dycore. Cite Chen et al. (2013) and Zhou et al. (2019) when using GFDL Microphysics.
 
@@ -105,6 +105,14 @@ The cloned tag here is the **202411** FV3 release.
 | reference/build.md | Building FV3 in a host model |
 | reference/debugging.md | Instabilities, CFL, blowups |
 
+## Critical agent gotchas (Gemini-reviewed)
+
+- **FV3 cannot be built standalone.** It depends on **GFDL FMS** (see fms-skill). Cloning `GFDL_atmos_cubed_sphere` alone is insufficient; the host (UFS, AM4, SHiELD) provides the FMS link.
+- **Dual mode dycore.** FV3 supports both **non-hydrostatic** (default for high-resolution / weather) and **hydrostatic** (`hydrostatic=.true.`, common for AM4/CM4 climate). Pick deliberately.
+- **Required inputs.** A grid_spec / mosaic file describing the cubed-sphere geometry, plus an `input.nml` with the FV3 namelist block. Without these, FV3 will not initialize.
+- **HRRR is WRF-based, not FV3.** The UFS-based successor regional forecast is **RRFS**, not HRRR.
+- **Foundational citations:** Putman & Lin 2007 and Harris & Lin 2013 for the dycore; Lin & Rood 1996, 1997 for the underlying flux-form transport; Chen et al. 2013 and Zhou et al. 2019 for GFDL Microphysics.
+
 ## Status
 
-Scaffold (v0.1.0-scaffold). Source-grounded layout verified. Operational depth being filled in.
+Scaffold (v0.1.0-scaffold). Source-grounded layout verified, with Gemini critique pass on 2026-05-09 to correct sub-stepping definitions and add FMS dependency. Operational depth being filled in.
